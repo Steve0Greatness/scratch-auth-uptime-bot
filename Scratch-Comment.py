@@ -1,7 +1,7 @@
 import scratchattach as scratch3
 from dotenv import load_dotenv, find_dotenv
 from time import sleep
-from base64 import b64decode
+from datetime import datetime
 from requests import get
 from bs4 import BeautifulSoup
 import os
@@ -18,38 +18,36 @@ session = scratch3.login(User, Pass)
 profile = session.connect_user(User)
 
 def GetSAuthCode():
-    try:
-        URL = f"https://auth-api.itinerary.eu.org/auth/getTokens?method=profile-comment&username={User}"
-        res = get(URL).json()
-        PubCode = res["publicCode"]
-        PrivCode = res["privateCode"]
-        return ( PubCode, PrivCode )
-    except:
-        return None
+    URL = f"https://auth-api.itinerary.eu.org/auth/getTokens?redirect=aHR0cHM6Ly9zY3JhdGNoLm1pdC5lZHUv&method=profile-comment&username={User}"
+    res = get(URL).json()
+    print(res)
+    PubCode = res["publicCode"]
+    PrivCode = res["privateCode"]
+    return ( PubCode, PrivCode )
 
 def CommentThenCheckThenDel(PubCode: str, PrivCode: str) -> bool:
-    try:
-        profile.toggle_commenting()
-        CommentHTML = profile.post_comment(PubCode)
-        CommentSoup = BeautifulSoup(CommentHTML, "html.parser")
-        CommentId = CommentSoup.css.select("[data-comment-id]").get("data-comment-id")
-        
-        Verified = False
-        try:
-            URL = "https://auth-api.itinerary.eu.org/auth/verifyToken/" + PrivCode
-            res = get(URL).json()
-            Verified = res["valid"]
-        except:
-            pass
+    profile.toggle_commenting()
+    CommentHTML = profile.post_comment(PubCode)
+    CommentSoup = BeautifulSoup(CommentHTML, "html.parser")
+    CommentId = CommentSoup.select_one("[data-comment-id]").get("data-comment-id")
 
-        profile.delete_comment(CommentId)
-        profile.toggle_commenting()
-        return Verified
-    except:
-        return False
+    Verified = False
+    URL = "https://auth-api.itinerary.eu.org/auth/verifyToken/" + PrivCode
+    res = get(URL).json()
+    Verified = res["valid"]
+    
+    sleep(3)
+
+    profile.delete_comment(comment_id=CommentId)
+    profile.toggle_commenting()
+    return Verified
 
 while True:
     PubCode, PrivCode = GetSAuthCode()
     Verified = CommentThenCheckThenDel(PubCode, PrivCode)
-    print(Verified)
+    Now = datetime.now().strftime("%Y %b %d %H:%M:%S.%f") + " -- "
+    if Verified:
+        print(Now + "I was able to authenticate")
+    else:
+        print(Now + "I was not able to authenticate")
     sleep(SleepTime)
