@@ -20,7 +20,6 @@ profile = session.connect_user(User)
 def GetSAuthCode():
     URL = f"https://auth-api.itinerary.eu.org/auth/getTokens?redirect=aHR0cHM6Ly9zY3JhdGNoLm1pdC5lZHUv&method=profile-comment&username={User}"
     res = get(URL).json()
-    print(res)
     PubCode = res["publicCode"]
     PrivCode = res["privateCode"]
     return ( PubCode, PrivCode )
